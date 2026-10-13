@@ -1,0 +1,164 @@
+# https://taskfile.dev — run `task` to list everything.
+version: '3'
+
+vars:
+  # Use the local pnpm if installed, otherwise a pinned one through npx.
+  PNPM:
+    sh: command -v pnpm >/dev/null 2>&1 && pnpm --version >/dev/null 2>&1 && echo pnpm || echo "npx -y pnpm@10.34.7"
+  COMPOSE: docker compose
+  YEARS: '2024'
+
+dotenv: ['.env']
+
+tasks:
+  default:
+    desc: List available tasks
+    silent: true
+    cmds:
+      - task --list
+
+  # ───────────────────────────── Setup ─────────────────────────────
+  setup:
+    desc: Install dependencies and create .env (first run)
+    cmds:
+      - cmd: test -f .env || cp .env.example .env
+      - '{{.PNPM}} install'
+    sources: [package.json, '**/package.json', pnpm-lock.yaml]
+
+  # ─────────────────────────── Docker stack ──────────────────────────
+  up:
+    desc: Build and start the whole stack (Postgres, Redis, API, worker, web, docs)
+    cmds:
+      - '{{.COMPOSE}} up -d --build --wait postgres redis api worker web docs'
+      - task: urls
+
+  start:
+    desc: Full demo — start the stack and import a season (YEARS="2024 2025")
+    cmds:
+      - task: up
+      - task: sync
+      - echo "Import en cours… suivez-le avec `task logs -- worker` ou sur http://localhost:8080"
+
+  down:
+    desc: Stop the stack (data is kept)
+    cmds:
+      - '{{.COMPOSE}} down'
+
+  reset:
+    desc: Stop the stack AND delete all data volumes
+    prompt: This deletes the database volume. Continue?
+    cmds:
+      - '{{.COMPOSE}} down -v --remove-orphans'
+
+  ps:
+    desc: Show service status
+    cmds:
+      - '{{.COMPOSE}} ps'
+
+  logs:
+    desc: 'Follow logs (e.g. task logs -- worker)'
+    cmds:
+      - '{{.COMPOSE}} logs -f --tail=100 {{.CLI_ARGS}}'
+
+  urls:
+    silent: true
+    cmds:
+      - |
+        echo ""
+        echo "  🏁  App        http://localhost:8080"
+        echo "  📘  API docs   http://localhost:3000/docs"
+        echo "  📚  Docs       http://localhost:4000"
+        echo "  ❤️   Health     http://localhost:3000/health"
+        echo ""
+
+  # ─────────────────────────── Data ───────────────────────────
+  sync:
+    desc: 'Import seasons from OpenF1 via background jobs (YEARS="2023 2024")'
+    cmds:
+      - '{{.COMPOSE}} run --rm --no-deps api node dist/sync.js {{.YEARS}} {{.CLI_ARGS}}'
+
+  sync:force:
+    desc: Re-import seasons even if races are already ingested
+    cmds:
+      - task: sync
+        vars: { CLI_ARGS: --force }
+
+  migrate:
+    desc: Apply database migrations
+    cmds:
+      - '{{.COMPOSE}} run --rm migrate'
+
+  db:psql:
+    desc: Open a psql shell
+    interactive: true
+    cmds:
+      - '{{.COMPOSE}} exec postgres psql -U pitwall -d pitwall'
+
+  # ─────────────────────────── Local dev ───────────────────────────
+  dev:infra:
+    desc: Start only Postgres + Redis (for running API/web on the host)
+    cmds:
+      - '{{.COMPOSE}} up -d --wait postgres redis'
+
+  dev:api:
+    desc: Run the API with hot reload on the host
+    deps: [setup]
+    cmds:
+      - '{{.PNPM}} --filter @pitwall/api migrate'
+      - '{{.PNPM}} --filter @pitwall/api dev'
+
+  dev:worker:
+    desc: Run the job worker with hot reload on the host
+    deps: [setup]
+    cmds:
+      - '{{.PNPM}} --filter @pitwall/api dev:worker'
+
+  dev:web:
+    desc: Run the Expo app (web on :8081, press i / a for iOS / Android)
+    deps: [setup]
+    cmds:
+      - '{{.PNPM}} --filter @pitwall/web dev'
+
+  dev:docs:
+    desc: Run the documentation site with hot reload
+    deps: [setup]
+    cmds:
+      - '{{.PNPM}} --filter @pitwall/docs dev'
+
+  # ─────────────────────────── Quality ───────────────────────────
+  lint:
+    desc: Lint and format check (Biome)
+    cmds:
+      - '{{.PNPM}} check'
+
+  format:
+    desc: Auto-fix lint and formatting
+    cmds:
+      - '{{.PNPM}} format'
+
+  typecheck:
+    desc: Type-check every package
+    cmds:
+      - '{{.PNPM}} -r typecheck'
+
+  test:
+    desc: Run unit tests
+    cmds:
+      - '{{.PNPM}} --filter @pitwall/api test'
+
+  test:coverage:
+    desc: Unit tests with coverage report
+    cmds:
+      - '{{.PNPM}} --filter @pitwall/api exec vitest run --coverage'
+
+  ci:
+    desc: Everything CI runs — lint, typecheck, tests
+    cmds:
+      - task: lint
+      - task: typecheck
+      - task: test
+
+  load-test:
+    desc: k6 load test against the running API (stack must be up with data)
+    cmds:
+      - '{{.COMPOSE}} --profile tools run --rm k6 run /scripts/race-analysis.js'
