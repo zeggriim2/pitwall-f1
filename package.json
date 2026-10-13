@@ -1,0 +1,25 @@
+{
+  "name": "pitwall",
+  "private": true,
+  "description": "Pitwall — F1 driver race performance analytics. TypeScript end-to-end monorepo.",
+  "packageManager": "pnpm@10.34.7",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "check": "biome check .",
+    "format": "biome check --write .",
+    "typecheck": "pnpm -r --parallel typecheck",
+    "test": "pnpm -r test",
+    "build": "pnpm -r build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "typescript": "~5.9.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

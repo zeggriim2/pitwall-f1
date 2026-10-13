@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.expo/
+web-build/
+coverage/
+.env
+*.log
+.DS_Store
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+load-tests/results/
+.vitest/
+.idea/
