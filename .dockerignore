@@ -1,0 +1,9 @@
+**/node_modules
+**/dist
+**/.expo
+**/.vitest
+docs/.vitepress/cache
+docs/.vitepress/dist
+.git
+.env
+load-tests/results
