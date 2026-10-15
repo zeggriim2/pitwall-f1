@@ -1,5 +1,6 @@
 import { match, P } from 'ts-pattern'
-import type { DriverTable, LapTable, PitStopTable, ResultTable, StintTable } from '../platform/db/schema'
+import type { LapTable, PitStopTable, ResultTable, StintTable } from '../platform/db/schema'
+import type { Id, IdFactory } from '../platform/id'
 import { lapKey, resolveLapPositions } from './lap-positions'
 import type {
   OpenF1Driver,
@@ -19,16 +20,35 @@ export interface RawRace {
   results: OpenF1SessionResult[]
 }
 
+/**
+ * A driver entry before its identity is resolved. `acronym` and `full_name`
+ * describe the driver; the ingestion turns them into a `driver_id` by upserting
+ * the `drivers` table, which mapping cannot do without touching the database.
+ */
+export interface MappedEntry {
+  id: Id
+  race_id: Id
+  driver_number: number
+  team_name: string
+  team_colour: string
+  headshot_url: string | null
+  acronym: string
+  full_name: string
+}
+
 export interface RaceRows {
-  drivers: DriverTable[]
+  entries: MappedEntry[]
   laps: LapTable[]
   stints: StintTable[]
   pitStops: PitStopTable[]
   results: ResultTable[]
 }
 
-/** Pure translation from OpenF1 payloads to database rows. */
-export function mapRace(sessionKey: number, raw: RawRace): RaceRows {
+/**
+ * Pure translation from OpenF1 payloads to database rows.
+ * `newId` is injected so tests can pin the generated keys.
+ */
+export function mapRace(raceId: Id, raw: RawRace, newId: IdFactory): RaceRows {
   const { byLap, grid } = resolveLapPositions(
     raw.laps.map((lap) => ({
       driverNumber: lap.driver_number,
@@ -43,25 +63,28 @@ export function mapRace(sessionKey: number, raw: RawRace): RaceRows {
     })),
   )
 
-  const drivers = dedupe(raw.drivers, (d) => d.driver_number).map(
-    (d): DriverTable => ({
-      session_key: sessionKey,
+  const entries = dedupe(raw.drivers, (d) => d.driver_number).map(
+    (d): MappedEntry => ({
+      id: newId(),
+      race_id: raceId,
       driver_number: d.driver_number,
-      acronym: d.name_acronym ?? String(d.driver_number),
-      full_name: d.full_name ?? d.broadcast_name ?? `#${d.driver_number}`,
       team_name: d.team_name ?? 'Unknown',
       team_colour: (d.team_colour ?? '8a8f98').replace('#', '').toLowerCase(),
       headshot_url: d.headshot_url,
+      acronym: d.name_acronym ?? String(d.driver_number),
+      full_name: d.full_name ?? d.broadcast_name ?? `#${d.driver_number}`,
     }),
   )
-  const known = new Set(drivers.map((d) => d.driver_number))
+  const entryIdByNumber = new Map(entries.map((e) => [e.driver_number, e.id]))
+  const entryId = (driverNumber: number): Id => entryIdByNumber.get(driverNumber) as Id
+  const known = (driverNumber: number) => entryIdByNumber.has(driverNumber)
 
   const laps = dedupe(raw.laps, (l) => lapKey(l.driver_number, l.lap_number))
-    .filter((l) => known.has(l.driver_number))
+    .filter((l) => known(l.driver_number))
     .map(
       (l): LapTable => ({
-        session_key: sessionKey,
-        driver_number: l.driver_number,
+        id: newId(),
+        driver_entry_id: entryId(l.driver_number),
         lap_number: l.lap_number,
         lap_duration: l.lap_duration,
         sector_1: l.duration_sector_1,
@@ -75,15 +98,15 @@ export function mapRace(sessionKey: number, raw: RawRace): RaceRows {
     )
 
   const lastLap = new Map<number, number>()
-  for (const lap of laps)
+  for (const lap of raw.laps)
     lastLap.set(lap.driver_number, Math.max(lastLap.get(lap.driver_number) ?? 0, lap.lap_number))
 
   const stints = dedupe(raw.stints, (s) => `${s.driver_number}:${s.stint_number}`)
-    .filter((s) => known.has(s.driver_number) && s.lap_start !== null)
+    .filter((s) => known(s.driver_number) && s.lap_start !== null)
     .map(
       (s): StintTable => ({
-        session_key: sessionKey,
-        driver_number: s.driver_number,
+        id: newId(),
+        driver_entry_id: entryId(s.driver_number),
         stint_number: s.stint_number,
         compound: s.compound ?? 'UNKNOWN',
         lap_start: s.lap_start as number,
@@ -94,11 +117,11 @@ export function mapRace(sessionKey: number, raw: RawRace): RaceRows {
     )
 
   const pitStops = dedupe(raw.pitStops, (p) => lapKey(p.driver_number, p.lap_number))
-    .filter((p) => known.has(p.driver_number))
+    .filter((p) => known(p.driver_number))
     .map(
       (p): PitStopTable => ({
-        session_key: sessionKey,
-        driver_number: p.driver_number,
+        id: newId(),
+        driver_entry_id: entryId(p.driver_number),
         lap_number: p.lap_number,
         lane_duration: p.lane_duration ?? p.pit_duration,
         stop_duration: p.stop_duration,
@@ -106,11 +129,11 @@ export function mapRace(sessionKey: number, raw: RawRace): RaceRows {
     )
 
   const results = dedupe(raw.results, (r) => r.driver_number)
-    .filter((r) => known.has(r.driver_number))
+    .filter((r) => known(r.driver_number))
     .map(
       (r): ResultTable => ({
-        session_key: sessionKey,
-        driver_number: r.driver_number,
+        id: newId(),
+        driver_entry_id: entryId(r.driver_number),
         position: r.position,
         grid_position: grid.get(r.driver_number) ?? null,
         status: resultStatus(r),
@@ -121,7 +144,7 @@ export function mapRace(sessionKey: number, raw: RawRace): RaceRows {
       }),
     )
 
-  return { drivers, laps, stints, pitStops, results }
+  return { entries, laps, stints, pitStops, results }
 }
 
 export function resultStatus(r: Pick<OpenF1SessionResult, 'dnf' | 'dns' | 'dsq'>): ResultTable['status'] {

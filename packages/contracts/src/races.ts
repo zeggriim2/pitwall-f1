@@ -1,11 +1,11 @@
 import { z } from 'zod'
+import { Id } from './common'
 
 export const RaceStatus = z.enum(['pending', 'ingesting', 'ready', 'failed'])
 export type RaceStatus = z.infer<typeof RaceStatus>
 
 export const RaceSummary = z.object({
-  sessionKey: z.number().int(),
-  meetingKey: z.number().int(),
+  id: Id,
   year: z.number().int(),
   round: z.number().int(),
   name: z.string(),

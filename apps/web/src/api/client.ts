@@ -1,3 +1,4 @@
+import type { Id } from '@pitwall/contracts'
 import {
   ApiError,
   DriverAnalysis,
@@ -47,9 +48,9 @@ export const api = {
   seasons: () => request('/api/seasons', SeasonList),
   races: (year: number) => request(`/api/seasons/${year}/races`, RaceList),
   syncSeason: (year: number) => request(`/api/seasons/${year}/sync`, SyncAccepted, { method: 'POST' }),
-  overview: (sessionKey: number) => request(`/api/races/${sessionKey}`, RaceOverview),
-  driver: (sessionKey: number, driverNumber: number) =>
-    request(`/api/races/${sessionKey}/drivers/${driverNumber}`, DriverAnalysis),
-  compare: (sessionKey: number, a: number, b: number) =>
-    request(`/api/races/${sessionKey}/compare?a=${a}&b=${b}`, DriverComparison),
+  overview: (raceId: Id) => request(`/api/races/${raceId}`, RaceOverview),
+  driver: (raceId: Id, driverNumber: number) =>
+    request(`/api/races/${raceId}/drivers/${driverNumber}`, DriverAnalysis),
+  compare: (raceId: Id, a: number, b: number) =>
+    request(`/api/races/${raceId}/compare?a=${a}&b=${b}`, DriverComparison),
 }

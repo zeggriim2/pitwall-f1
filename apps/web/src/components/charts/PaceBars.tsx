@@ -1,4 +1,4 @@
-import type { DriverRaceSummary } from '@pitwall/contracts'
+import type { DriverRaceSummary, Id } from '@pitwall/contracts'
 import { Link } from 'expo-router'
 import { StyleSheet, Text, View } from 'react-native'
 import { HoverPressable } from '@/components/ui/HoverPressable'
@@ -6,7 +6,7 @@ import { delta, lapTime } from '@/lib/format'
 import { colors, fonts, teamColor } from '@/theme/tokens'
 
 /** Race-pace ranking: bar length = median pace delta to the fastest driver. */
-export function PaceBars({ drivers, sessionKey }: { drivers: DriverRaceSummary[]; sessionKey: number }) {
+export function PaceBars({ drivers, raceId }: { drivers: DriverRaceSummary[]; raceId: Id }) {
   const ranked = drivers
     .filter((d) => d.paceRank !== null && d.paceDeltaToBest !== null)
     .sort((a, b) => (a.paceRank ?? 0) - (b.paceRank ?? 0))
@@ -19,7 +19,7 @@ export function PaceBars({ drivers, sessionKey }: { drivers: DriverRaceSummary[]
         return (
           <Link
             key={d.driver.driverNumber}
-            href={`/races/${sessionKey}/drivers/${d.driver.driverNumber}`}
+            href={`/races/${raceId}/drivers/${d.driver.driverNumber}`}
             asChild
           >
             <HoverPressable style={styles.row} hoverStyle={styles.rowHover}>

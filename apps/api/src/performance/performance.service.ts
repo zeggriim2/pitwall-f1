@@ -1,13 +1,14 @@
 import type { DriverAnalysis, DriverComparison, RaceOverview, RaceSummary } from '@pitwall/contracts'
 import type { Cache } from '../platform/cache'
 import { NotFoundError, NotReadyError } from '../platform/errors'
+import type { Id } from '../platform/id'
 import type { RaceRepository } from '../races/race.repository'
 import { compareDrivers } from './domain/driver-comparison'
 import { analyseRace, type RaceAnalysis } from './domain/race-overview'
 import type { AnalysisOptions } from './domain/types'
 import type { PerformanceRepository } from './performance.repository'
 
-export const performanceCachePrefix = (sessionKey: number) => `perf:v1:${sessionKey}:`
+export const performanceCachePrefix = (raceId: Id) => `perf:v2:${raceId}:`
 
 export interface PerformanceServiceDeps {
   races: RaceRepository
@@ -25,13 +26,13 @@ export interface PerformanceServiceDeps {
 export class PerformanceService {
   constructor(private readonly deps: PerformanceServiceDeps) {}
 
-  getRaceOverview(sessionKey: number): Promise<RaceOverview> {
-    return this.cached(sessionKey, 'overview', async () => (await this.analyse(sessionKey)).overview)
+  getRaceOverview(raceId: Id): Promise<RaceOverview> {
+    return this.cached(raceId, 'overview', async () => (await this.analyse(raceId)).overview)
   }
 
-  getDriverAnalysis(sessionKey: number, driverNumber: number): Promise<DriverAnalysis> {
-    return this.cached(sessionKey, `driver:${driverNumber}`, async () => {
-      const analysis = await this.analyse(sessionKey)
+  getDriverAnalysis(raceId: Id, driverNumber: number): Promise<DriverAnalysis> {
+    return this.cached(raceId, `driver:${driverNumber}`, async () => {
+      const analysis = await this.analyse(raceId)
       const performance = analysis.performances.get(driverNumber)
       const summary = analysis.summaries.get(driverNumber)
       if (!performance || !summary) throw new NotFoundError(`Driver #${driverNumber} did not take part`)
@@ -53,9 +54,9 @@ export class PerformanceService {
     })
   }
 
-  compare(sessionKey: number, a: number, b: number): Promise<DriverComparison> {
-    return this.cached(sessionKey, `compare:${a}:${b}`, async () => {
-      const analysis = await this.analyse(sessionKey)
+  compare(raceId: Id, a: number, b: number): Promise<DriverComparison> {
+    return this.cached(raceId, `compare:${a}:${b}`, async () => {
+      const analysis = await this.analyse(raceId)
       const perfA = analysis.performances.get(a)
       const perfB = analysis.performances.get(b)
       if (!perfA || !perfB) throw new NotFoundError(`Driver #${perfA ? b : a} did not take part`)
@@ -63,22 +64,22 @@ export class PerformanceService {
     })
   }
 
-  private async analyse(sessionKey: number): Promise<RaceAnalysis> {
-    const race = await this.requireReadyRace(sessionKey)
-    const drivers = await this.deps.repository.loadDrivers(sessionKey)
+  private async analyse(raceId: Id): Promise<RaceAnalysis> {
+    const race = await this.requireReadyRace(raceId)
+    const drivers = await this.deps.repository.loadDrivers(raceId)
     return analyseRace({ race, drivers }, this.deps.options)
   }
 
-  private async requireReadyRace(sessionKey: number): Promise<RaceSummary> {
-    const race = await this.deps.races.findBySessionKey(sessionKey)
-    if (!race) throw new NotFoundError(`Race ${sessionKey} not found`)
-    if (race.status !== 'ready') throw new NotReadyError(`Race ${sessionKey} is ${race.status}`)
+  private async requireReadyRace(raceId: Id): Promise<RaceSummary> {
+    const race = await this.deps.races.findById(raceId)
+    if (!race) throw new NotFoundError(`Race ${raceId} not found`)
+    if (race.status !== 'ready') throw new NotReadyError(`Race ${raceId} is ${race.status}`)
     return race
   }
 
-  private cached<T>(sessionKey: number, key: string, compute: () => Promise<T>): Promise<T> {
+  private cached<T>(raceId: Id, key: string, compute: () => Promise<T>): Promise<T> {
     return this.deps.cache.remember(
-      `${performanceCachePrefix(sessionKey)}${key}`,
+      `${performanceCachePrefix(raceId)}${key}`,
       this.deps.cacheTtlSeconds,
       compute,
     )

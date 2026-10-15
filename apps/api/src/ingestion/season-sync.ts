@@ -1,5 +1,6 @@
 import { sql } from 'kysely'
 import type { Db } from '../platform/db/database'
+import { type Id, newId } from '../platform/id'
 import type { Logger } from '../platform/logger'
 import type { OpenF1Client } from './openf1/client'
 
@@ -7,7 +8,7 @@ export interface SeasonSyncResult {
   year: number
   races: number
   /** Finished races whose data is missing or stale and must be ingested. */
-  toIngest: number[]
+  toIngest: Id[]
 }
 
 /** Grace period after a race ends before OpenF1 data is considered complete. */
@@ -28,13 +29,18 @@ export async function syncSeason(
   const meetingByKey = new Map(meetings.map((m) => [m.meeting_key, m]))
   const usable = sessions.filter((s) => meetingByKey.has(s.meeting_key))
 
+  // OpenF1 keys only identify what we already imported; the ids we hand back are ours.
+  const meetingIdByKey = new Map<number, Id>()
+  const raceIdByKey = new Map<number, Id>()
+
   await deps.db.transaction().execute(async (trx) => {
     for (const session of usable) {
       const meeting = meetingByKey.get(session.meeting_key)
-      if (!meeting) continue
-      await trx
+      if (!meeting || meetingIdByKey.has(meeting.meeting_key)) continue
+      const row = await trx
         .insertInto('meetings')
         .values({
+          id: newId(),
           meeting_key: meeting.meeting_key,
           year: meeting.year,
           name: meeting.meeting_name,
@@ -52,15 +58,20 @@ export async function syncSeason(
             date_start: eb.ref('excluded.date_start'),
           })),
         )
-        .execute()
+        .returning(['id', 'meeting_key'])
+        .executeTakeFirstOrThrow()
+      meetingIdByKey.set(row.meeting_key, row.id)
     }
 
     for (const [index, session] of usable.entries()) {
-      await trx
+      const meetingId = meetingIdByKey.get(session.meeting_key)
+      if (!meetingId) continue
+      const row = await trx
         .insertInto('races')
         .values({
+          id: newId(),
           session_key: session.session_key,
-          meeting_key: session.meeting_key,
+          meeting_id: meetingId,
           year: session.year,
           round: index + 1,
           date_start: session.date_start,
@@ -74,27 +85,32 @@ export async function syncSeason(
             updated_at: sql`now()`,
           })),
         )
-        .execute()
+        .returning(['id', 'session_key'])
+        .executeTakeFirstOrThrow()
+      raceIdByKey.set(row.session_key, row.id)
     }
   })
 
   const finished = usable.filter((s) => Date.parse(s.date_end) + SETTLE_MS < now.getTime())
-  const keys = finished.map((s) => s.session_key)
+  const ids = finished.flatMap((s) => {
+    const id = raceIdByKey.get(s.session_key)
+    return id ? [id] : []
+  })
   const ready =
-    options.force || keys.length === 0
-      ? new Set<number>()
+    options.force || ids.length === 0
+      ? new Set<Id>()
       : new Set(
           (
             await deps.db
               .selectFrom('races')
-              .select('session_key')
-              .where('session_key', 'in', keys)
+              .select('id')
+              .where('id', 'in', ids)
               .where('status', '=', 'ready')
               .execute()
-          ).map((row) => row.session_key),
+          ).map((row) => row.id),
         )
 
-  const toIngest = keys.filter((key) => !ready.has(key))
+  const toIngest = ids.filter((id) => !ready.has(id))
   deps.logger.info({ year, races: usable.length, toIngest: toIngest.length }, 'season synced')
   return { year, races: usable.length, toIngest }
 }

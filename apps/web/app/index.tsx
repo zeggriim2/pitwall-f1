@@ -104,7 +104,7 @@ function RaceGrid({ races }: { races: RaceSummary[] }) {
   return (
     <View style={styles.grid}>
       {races.map((race) => (
-        <RaceCard key={race.sessionKey} race={race} basis={basis} />
+        <RaceCard key={race.id} race={race} basis={basis} />
       ))}
     </View>
   )
@@ -133,7 +133,7 @@ function RaceCard({ race, basis }: { race: RaceSummary; basis: `${number}%` }) {
     </HoverPressable>
   )
   return ready ? (
-    <Link href={`/races/${race.sessionKey}`} asChild>
+    <Link href={`/races/${race.id}`} asChild>
       {card}
     </Link>
   ) : (

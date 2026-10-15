@@ -16,7 +16,7 @@ export const performanceRoutes =
   (service: PerformanceService): FastifyPluginAsyncZod =>
   async (app) => {
     app.get(
-      '/races/:sessionKey',
+      '/races/:raceId',
       {
         schema: {
           tags: ['Performance'],
@@ -25,11 +25,11 @@ export const performanceRoutes =
           response: { 200: RaceOverview, ...errors },
         },
       },
-      (request) => service.getRaceOverview(request.params.sessionKey),
+      (request) => service.getRaceOverview(request.params.raceId),
     )
 
     app.get(
-      '/races/:sessionKey/drivers/:driverNumber',
+      '/races/:raceId/drivers/:driverNumber',
       {
         schema: {
           tags: ['Performance'],
@@ -38,11 +38,11 @@ export const performanceRoutes =
           response: { 200: DriverAnalysis, ...errors },
         },
       },
-      (request) => service.getDriverAnalysis(request.params.sessionKey, request.params.driverNumber),
+      (request) => service.getDriverAnalysis(request.params.raceId, request.params.driverNumber),
     )
 
     app.get(
-      '/races/:sessionKey/compare',
+      '/races/:raceId/compare',
       {
         schema: {
           tags: ['Performance'],
@@ -52,6 +52,6 @@ export const performanceRoutes =
           response: { 200: DriverComparison, ...errors },
         },
       },
-      (request) => service.compare(request.params.sessionKey, request.query.a, request.query.b),
+      (request) => service.compare(request.params.raceId, request.query.a, request.query.b),
     )
   }

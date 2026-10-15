@@ -20,16 +20,16 @@ import { delta, lapTime, seconds, signed } from '@/lib/format'
 import { colors, compoundColors, fonts, radius, space, teamColor } from '@/theme/tokens'
 
 export default function DriverScreen() {
-  const params = useLocalSearchParams<{ sessionKey: string; driverNumber: string }>()
-  const sessionKey = Number(params.sessionKey)
+  const params = useLocalSearchParams<{ raceId: string; driverNumber: string }>()
+  const raceId = params.raceId
   const driverNumber = Number(params.driverNumber)
-  const analysis = useDriverAnalysis(sessionKey, driverNumber)
+  const analysis = useDriverAnalysis(raceId, driverNumber)
 
   return (
     <Screen
       crumbs={[
         { label: analysis.data ? String(analysis.data.race.year) : 'Saison', href: '/' },
-        { label: analysis.data?.race.name ?? 'Course', href: `/races/${sessionKey}` },
+        { label: analysis.data?.race.name ?? 'Course', href: `/races/${raceId}` },
         { label: analysis.data?.summary.driver.acronym ?? `#${driverNumber}` },
       ]}
     >
@@ -46,9 +46,9 @@ function DriverContent({ data }: { data: DriverAnalysis }) {
   const { summary, race } = data
   const driver = summary.driver
   const color = teamColor(driver.teamColour)
-  const overview = useRaceOverview(race.sessionKey)
+  const overview = useRaceOverview(race.id)
   const [rival, setRival] = useState<number | null>(data.teammate?.driverNumber ?? null)
-  const comparison = useComparison(race.sessionKey, driver.driverNumber, rival)
+  const comparison = useComparison(race.id, driver.driverNumber, rival)
   const totalLaps = overview.data?.totalLaps ?? Math.max(...data.laps.map((l) => l.lap), 0)
 
   const vsField =

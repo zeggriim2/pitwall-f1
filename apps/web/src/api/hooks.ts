@@ -1,12 +1,13 @@
+import type { Id } from '@pitwall/contracts'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 
 export const queryKeys = {
   seasons: ['seasons'] as const,
   races: (year: number) => ['races', year] as const,
-  overview: (sessionKey: number) => ['overview', sessionKey] as const,
-  driver: (sessionKey: number, driverNumber: number) => ['driver', sessionKey, driverNumber] as const,
-  compare: (sessionKey: number, a: number, b: number) => ['compare', sessionKey, a, b] as const,
+  overview: (raceId: Id) => ['overview', raceId] as const,
+  driver: (raceId: Id, driverNumber: number) => ['driver', raceId, driverNumber] as const,
+  compare: (raceId: Id, a: number, b: number) => ['compare', raceId, a, b] as const,
 }
 
 export function useSeasons() {
@@ -40,21 +41,21 @@ export function useSyncSeason() {
   })
 }
 
-export function useRaceOverview(sessionKey: number) {
-  return useQuery({ queryKey: queryKeys.overview(sessionKey), queryFn: () => api.overview(sessionKey) })
+export function useRaceOverview(raceId: Id) {
+  return useQuery({ queryKey: queryKeys.overview(raceId), queryFn: () => api.overview(raceId) })
 }
 
-export function useDriverAnalysis(sessionKey: number, driverNumber: number) {
+export function useDriverAnalysis(raceId: Id, driverNumber: number) {
   return useQuery({
-    queryKey: queryKeys.driver(sessionKey, driverNumber),
-    queryFn: () => api.driver(sessionKey, driverNumber),
+    queryKey: queryKeys.driver(raceId, driverNumber),
+    queryFn: () => api.driver(raceId, driverNumber),
   })
 }
 
-export function useComparison(sessionKey: number, a: number, b: number | null) {
+export function useComparison(raceId: Id, a: number, b: number | null) {
   return useQuery({
-    queryKey: queryKeys.compare(sessionKey, a, b ?? 0),
-    queryFn: () => api.compare(sessionKey, a, b as number),
+    queryKey: queryKeys.compare(raceId, a, b ?? 0),
+    queryFn: () => api.compare(raceId, a, b as number),
     enabled: b !== null && b !== a,
   })
 }

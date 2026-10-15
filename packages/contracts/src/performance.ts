@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { DriverRef, Seconds, TyreCompound } from './common'
+import { DriverRef, Id, Seconds, TyreCompound } from './common'
 import { RaceSummary } from './races'
 
 export const ResultStatus = z.enum(['finished', 'dnf', 'dns', 'dsq'])
@@ -123,7 +123,7 @@ export const DriverComparison = z.object({
 })
 export type DriverComparison = z.infer<typeof DriverComparison>
 
-export const RaceParams = z.object({ sessionKey: z.coerce.number().int().positive() })
+export const RaceParams = z.object({ raceId: Id })
 export const DriverParams = RaceParams.extend({ driverNumber: z.coerce.number().int().positive() })
 export const CompareQuery = z.object({
   a: z.coerce.number().int().positive(),

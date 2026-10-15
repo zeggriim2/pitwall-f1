@@ -14,24 +14,24 @@ export const JOBS = {
 } as const
 
 export const SyncSeasonPayload = z.object({ year: z.number().int(), force: z.boolean().optional() })
-export const IngestRacePayload = z.object({ sessionKey: z.number().int() })
+export const IngestRacePayload = z.object({ raceId: z.uuid() })
 
 export function createTaskList(deps: IngestionDeps): TaskList {
   const syncSeasonTask: Task = async (payload, helpers) => {
     const { year, force } = SyncSeasonPayload.parse(payload)
     const result = await syncSeason(deps, year, { force: force ?? false })
-    for (const sessionKey of result.toIngest) {
+    for (const raceId of result.toIngest) {
       await helpers.addJob(
         JOBS.ingestRace,
-        { sessionKey },
-        { jobKey: `${JOBS.ingestRace}:${sessionKey}`, maxAttempts: 3 },
+        { raceId },
+        { jobKey: `${JOBS.ingestRace}:${raceId}`, maxAttempts: 3 },
       )
     }
   }
 
   const ingestRaceTask: Task = async (payload) => {
-    const { sessionKey } = IngestRacePayload.parse(payload)
-    await ingestRace(deps, sessionKey)
+    const { raceId } = IngestRacePayload.parse(payload)
+    await ingestRace(deps, raceId)
   }
 
   return { [JOBS.syncSeason]: syncSeasonTask, [JOBS.ingestRace]: ingestRaceTask }

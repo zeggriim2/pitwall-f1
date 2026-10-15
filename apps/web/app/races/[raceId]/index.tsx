@@ -1,4 +1,4 @@
-import type { DriverRaceSummary, RaceOverview } from '@pitwall/contracts'
+import type { DriverRaceSummary, Id, RaceOverview } from '@pitwall/contracts'
 import { Link, useLocalSearchParams } from 'expo-router'
 import { useMemo, useState } from 'react'
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native'
@@ -12,9 +12,9 @@ import { flag, lapTime, raceDate, signed } from '@/lib/format'
 import { colors, fonts, space, teamColor } from '@/theme/tokens'
 
 export default function RaceScreen() {
-  const params = useLocalSearchParams<{ sessionKey: string }>()
-  const sessionKey = Number(params.sessionKey)
-  const overview = useRaceOverview(sessionKey)
+  const params = useLocalSearchParams<{ raceId: string }>()
+  const raceId = params.raceId
+  const overview = useRaceOverview(raceId)
 
   return (
     <Screen
@@ -131,7 +131,7 @@ function RaceContent({ data }: { data: RaceOverview }) {
             title="Rythme de course"
             subtitle="Médiane des tours représentatifs, écart au plus rapide"
           />
-          <PaceBars drivers={data.drivers} sessionKey={data.race.sessionKey} />
+          <PaceBars drivers={data.drivers} raceId={data.race.id} />
         </Card>
       </View>
 
@@ -178,7 +178,7 @@ function ClassificationTable({
         <Row
           key={d.driver.driverNumber}
           d={d}
-          sessionKey={data.race.sessionKey}
+          raceId={data.race.id}
           fastest={d.driver.driverNumber === fastest}
           focused={focus === d.driver.driverNumber}
           onFocus={() => onFocus(focus === d.driver.driverNumber ? null : d.driver.driverNumber)}
@@ -191,14 +191,14 @@ function ClassificationTable({
 
 function Row({
   d,
-  sessionKey,
+  raceId,
   fastest,
   focused,
   onFocus,
   compact,
 }: {
   d: DriverRaceSummary
-  sessionKey: number
+  raceId: Id
   fastest: boolean
   focused: boolean
   onFocus: () => void
@@ -219,7 +219,7 @@ function Row({
         <View style={{ flexShrink: 1 }}>
           {compact ? (
             <Link
-              href={`/races/${sessionKey}/drivers/${d.driver.driverNumber}`}
+              href={`/races/${raceId}/drivers/${d.driver.driverNumber}`}
               style={styles.driverName}
               numberOfLines={1}
             >
@@ -279,7 +279,7 @@ function Row({
       <Text style={[styles.td, styles.cNum]}>{d.pitStops}</Text>
       {!compact ? (
         <Link
-          href={`/races/${sessionKey}/drivers/${d.driver.driverNumber}`}
+          href={`/races/${raceId}/drivers/${d.driver.driverNumber}`}
           style={[styles.cAction, styles.analyse]}
         >
           Analyser →

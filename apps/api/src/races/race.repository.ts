@@ -1,10 +1,10 @@
 import type { RaceSummary, Season } from '@pitwall/contracts'
 import { sql } from 'kysely'
 import type { Db } from '../platform/db/database'
+import type { Id } from '../platform/id'
 
 const raceColumns = [
-  'r.session_key',
-  'r.meeting_key',
+  'r.id',
   'r.year',
   'r.round',
   'r.date_start',
@@ -40,15 +40,15 @@ export class RaceRepository {
     return rows.map(toRaceSummary)
   }
 
-  async findBySessionKey(sessionKey: number): Promise<RaceSummary | null> {
-    const row = await this.baseQuery().where('r.session_key', '=', sessionKey).executeTakeFirst()
+  async findById(raceId: Id): Promise<RaceSummary | null> {
+    const row = await this.baseQuery().where('r.id', '=', raceId).executeTakeFirst()
     return row ? toRaceSummary(row) : null
   }
 
   private baseQuery() {
     return this.db
       .selectFrom('races as r')
-      .innerJoin('meetings as m', 'm.meeting_key', 'r.meeting_key')
+      .innerJoin('meetings as m', 'm.id', 'r.meeting_id')
       .select(raceColumns)
   }
 }
@@ -57,8 +57,7 @@ type RaceQueryRow = Awaited<ReturnType<ReturnType<RaceRepository['baseQuery']>['
 
 function toRaceSummary(row: RaceQueryRow): RaceSummary {
   return {
-    sessionKey: row.session_key,
-    meetingKey: row.meeting_key,
+    id: row.id,
     year: row.year,
     round: row.round,
     name: row.name,

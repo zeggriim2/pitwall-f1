@@ -2,8 +2,7 @@ import type { DriverRef, RaceSummary } from '@pitwall/contracts'
 import type { DriverRaceData, LapInput } from './types'
 
 export const race: RaceSummary = {
-  sessionKey: 9472,
-  meetingKey: 1229,
+  id: '0199a1b2-c3d4-7000-8000-000000000001',
   year: 2024,
   round: 1,
   name: 'Bahrain Grand Prix',
@@ -19,6 +18,7 @@ export const race: RaceSummary = {
 
 export function driver(driverNumber: number, overrides: Partial<DriverRef> = {}): DriverRef {
   return {
+    id: `0199a1b2-c3d4-7000-8000-${String(driverNumber).padStart(12, '0')}`,
     driverNumber,
     acronym: `D${driverNumber}`,
     fullName: `Driver ${driverNumber}`,

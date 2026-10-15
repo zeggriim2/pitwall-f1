@@ -32,14 +32,14 @@ export function setup() {
     .get(`${BASE_URL}/api/seasons/${year}/races`)
     .json('races')
     .filter((r) => r.status === 'ready')
-  return { races: races.map((r) => r.sessionKey) }
+  return { races: races.map((r) => r.id) }
 }
 
 export default function ({ races }) {
-  const sessionKey = races[Math.floor(Math.random() * races.length)]
+  const raceId = races[Math.floor(Math.random() * races.length)]
 
   group('race overview', () => {
-    const res = http.get(`${BASE_URL}/api/races/${sessionKey}`, { tags: { endpoint: 'overview' } })
+    const res = http.get(`${BASE_URL}/api/races/${raceId}`, { tags: { endpoint: 'overview' } })
     check(res, { 'overview 200': (r) => r.status === 200 })
     const drivers = res.json('drivers') || []
     if (drivers.length < 2) return
@@ -49,12 +49,12 @@ export default function ({ races }) {
     sleep(1)
 
     group('driver deep dive', () => {
-      const driver = http.get(`${BASE_URL}/api/races/${sessionKey}/drivers/${a}`, {
+      const driver = http.get(`${BASE_URL}/api/races/${raceId}/drivers/${a}`, {
         tags: { endpoint: 'driver' },
       })
       check(driver, { 'driver 200': (r) => r.status === 200 })
       if (a !== b) {
-        const compare = http.get(`${BASE_URL}/api/races/${sessionKey}/compare?a=${a}&b=${b}`, {
+        const compare = http.get(`${BASE_URL}/api/races/${raceId}/compare?a=${a}&b=${b}`, {
           tags: { endpoint: 'compare' },
         })
         check(compare, { 'compare 200': (r) => r.status === 200 })
