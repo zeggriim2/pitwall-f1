@@ -14,7 +14,7 @@ import { RaceRepository } from '../races/race.repository'
  */
 export function createContainer(name: string, config: Config = loadConfig()) {
   const logger = createLogger(config, name)
-  const db = createDatabase(config.DATABASE_URL)
+  const db = createDatabase(config.DATABASE_URL, logger)
   const cache = createRedisCache(config.REDIS_URL, logger)
   const races = new RaceRepository(db)
   const performance = new PerformanceService({
