@@ -6,6 +6,7 @@ vars:
   PNPM:
     sh: command -v pnpm >/dev/null 2>&1 && pnpm --version >/dev/null 2>&1 && echo pnpm || echo "npx -y pnpm@10.34.7"
   COMPOSE: docker compose
+  COMPOSE_DEV: docker compose -f docker-compose.yml -f docker-compose.dev.yml
   YEARS: '2024'
 
 dotenv: ['.env']
@@ -93,6 +94,39 @@ tasks:
     interactive: true
     cmds:
       - '{{.COMPOSE}} exec postgres psql -U pitwall -d pitwall'
+
+  # ─────────────────────── Docker dev stack ───────────────────────
+  dev:docker:
+    desc: Start the whole stack in Docker with hot reload (API :3000, app :8081)
+    cmds:
+      - '{{.COMPOSE_DEV}} up -d --build --wait postgres redis api worker'
+      - '{{.COMPOSE_DEV}} up -d --build web'
+      - task: dev:docker:urls
+
+  dev:docker:down:
+    desc: Stop the hot-reload stack (data is kept)
+    cmds:
+      - '{{.COMPOSE_DEV}} down'
+
+  dev:docker:logs:
+    desc: 'Follow hot-reload logs (e.g. task dev:docker:logs -- api)'
+    cmds:
+      - '{{.COMPOSE_DEV}} logs -f --tail=100 {{.CLI_ARGS}}'
+
+  dev:docker:sync:
+    desc: 'Import seasons into the hot-reload stack (YEARS="2023 2024")'
+    cmds:
+      - '{{.COMPOSE_DEV}} run --rm --no-deps api pnpm exec tsx src/main/sync.ts {{.YEARS}} {{.CLI_ARGS}}'
+
+  dev:docker:urls:
+    silent: true
+    cmds:
+      - |
+        echo ""
+        echo "  🏁  App (Metro)  http://localhost:8081"
+        echo "  📘  API docs     http://localhost:3000/docs"
+        echo "  🐞  Inspector    chrome://inspect → localhost:9229"
+        echo ""
 
   # ─────────────────────────── Local dev ───────────────────────────
   dev:infra:

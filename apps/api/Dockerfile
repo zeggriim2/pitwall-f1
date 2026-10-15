@@ -12,6 +12,16 @@ COPY apps/web/package.json apps/web/
 COPY packages/contracts/package.json packages/contracts/
 COPY docs/package.json docs/
 
+# Hot-reload stage: sources arrive via bind mount, devDependencies (tsx) included.
+FROM base AS dev
+ENV NODE_ENV=development
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --filter @pitwall/api...
+COPY tsconfig.base.json ./
+WORKDIR /repo/apps/api
+EXPOSE 3000 9229
+CMD ["pnpm", "dev"]
+
 FROM base AS build
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --filter @pitwall/api...

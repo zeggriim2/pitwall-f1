@@ -1,0 +1,60 @@
+# Dev overlay: hot reload inside the containers.
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# Use `task dev:docker`. The plain `task up` stack stays production-like.
+name: pitwall
+
+x-api-dev: &api-dev
+  image: pitwall-api:dev
+  build:
+    context: .
+    dockerfile: apps/api/Dockerfile
+    target: dev
+  environment:
+    NODE_ENV: development
+    LOG_LEVEL: ${LOG_LEVEL:-debug}
+  volumes:
+    - ./apps/api:/repo/apps/api
+    - ./packages/contracts:/repo/packages/contracts
+    # Keep the image's install: never let the host's node_modules leak in.
+    - /repo/apps/api/node_modules
+    - /repo/packages/contracts/node_modules
+
+services:
+  migrate:
+    <<: *api-dev
+    command: ['pnpm', 'exec', 'tsx', 'src/main/migrate.ts']
+
+  api:
+    <<: *api-dev
+    # 9229: attach a debugger (chrome://inspect or VS Code).
+    command: ['pnpm', 'exec', 'tsx', 'watch', '--inspect=0.0.0.0:9229', 'src/main/server.ts']
+    ports: ['3000:3000', '9229:9229']
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/health > /dev/null || exit 1']
+      interval: 10s
+      timeout: 3s
+      start_period: 30s
+      retries: 10
+
+  worker:
+    <<: *api-dev
+    command: ['pnpm', 'exec', 'tsx', 'watch', 'src/main/worker.ts']
+
+  web:
+    image: pitwall-web:dev
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: dev
+    # Metro serves the app itself: the browser hits :8081, not nginx.
+    ports: !override ['8081:8081']
+    environment:
+      NODE_ENV: development
+      # The bundle runs in the host browser, so it calls the published API port.
+      EXPO_PUBLIC_API_URL: http://localhost:3000
+    volumes:
+      - ./apps/web:/repo/apps/web
+      - ./packages/contracts:/repo/packages/contracts
+      - /repo/apps/web/node_modules
+      - /repo/packages/contracts/node_modules
+      - /repo/apps/web/.expo
