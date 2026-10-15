@@ -11,3 +11,6 @@ docs/.vitepress/dist/
 load-tests/results/
 .vitest/
 .idea/
+
+# Task checksum cache
+.task/
