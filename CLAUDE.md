@@ -21,5 +21,9 @@
 - Les textes d'interface sont en français ; le code, les identifiants et les commentaires sont en anglais.
 - React Native : sous `<Link asChild>`, passer des styles aplatis — utiliser `HoverPressable` pour les états de survol.
 
+## Git
+- **Ne jamais commiter sans demander.** Présenter les changements et le découpage proposé, attendre l'accord explicite.
+- Même chose pour tout ce qui sort du poste : push, pull request, tag.
+
 ## Décisions
 Lire `docs/adr/` avant de proposer un changement structurel ; ajouter un ADR pour toute nouvelle décision.

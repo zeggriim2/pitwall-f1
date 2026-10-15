@@ -21,5 +21,9 @@
 - UI copy is French; code, identifiers and comments are English.
 - React Native: under `<Link asChild>` pass flattened styles — use `HoverPressable` for hover states.
 
+## Git
+- **Never commit without asking.** Present the changes and the proposed split, then wait for an explicit go-ahead.
+- Same for anything that leaves the machine: push, pull request, tag.
+
 ## Decisions
 Read `docs/adr/` before proposing structural changes; add an ADR for any new one.
