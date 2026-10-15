@@ -18,7 +18,8 @@ Toutes les opérations passent par [Task](https://taskfile.dev) : une seule inte
 | --- | --- |
 | `task sync YEARS="2023 2024"` | Met en file l’import des saisons |
 | `task sync:force` | Ré-importe tout, même les courses prêtes |
-| `task migrate` | Applique les migrations Kysely |
+| `task migrate` | Applique les migrations Kysely (reconstruit l’image au passage) |
+| `task db:reset` | Supprime toutes les tables et rejoue les migrations à zéro |
 | `task db:psql` | Shell `psql` |
 
 ## Développement & qualité

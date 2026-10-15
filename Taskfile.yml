@@ -87,7 +87,17 @@ tasks:
   migrate:
     desc: Apply database migrations
     cmds:
-      - '{{.COMPOSE}} run --rm migrate'
+      # --build or the image would replay the migrations it was compiled with,
+      # not the ones in the working tree.
+      - '{{.COMPOSE}} run --rm --build migrate'
+
+  db:reset:
+    desc: Drop every table and replay the migrations (data is lost — re-import with task sync)
+    prompt: This drops the whole schema. Continue?
+    cmds:
+      # Faster than recreating the volume, and it works while the API keeps running.
+      - '{{.COMPOSE}} exec -T postgres psql -U pitwall -d pitwall -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"'
+      - task: migrate
 
   db:psql:
     desc: Open a psql shell
