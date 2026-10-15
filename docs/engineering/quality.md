@@ -39,6 +39,6 @@ Seuils (la CI de charge échoue s’ils sont dépassés) :
 
 ## Observabilité
 
-- Logs JSON structurés (pino) avec contexte (`sessionKey`, `component`), prêts pour Datadog.
+- Logs JSON structurés (pino) avec contexte (`raceId`, `component`), prêts pour Datadog.
 - `/health` vérifie PostgreSQL et Redis, utilisé par le `HEALTHCHECK` Docker et `compose --wait`.
 - Statut d’ingestion par course (`pending` / `ingesting` / `ready` / `failed` + `last_error`) visible dans l’UI.

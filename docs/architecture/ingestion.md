@@ -18,13 +18,13 @@ sequenceDiagram
   W->>O: meetings + sessions 2024
   W->>Q: upsert calendrier (transaction)
   loop pour chaque course terminée et non prête
-    W->>Q: addJob ingest_race {sessionKey}
+    W->>Q: addJob ingest_race {raceId}
   end
   W->>Q: récupère ingest_race
   W->>O: drivers, laps, stints, pit, position, session_result
   W->>W: mapRace() — pur, testé
   W->>Q: DELETE + INSERT + status=ready (1 transaction)
-  W->>W: invalide perf:v1:{sessionKey}:*
+  W->>W: invalide perf:v2:{raceId}:*
 ```
 
 ## Garanties

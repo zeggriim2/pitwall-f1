@@ -13,9 +13,9 @@ La référence interactive est générée **depuis le code** (schémas Zod → O
 | `GET` | `/api/seasons` | Saisons connues, nombre de courses analysées |
 | `GET` | `/api/seasons/:year/races` | Calendrier d’une saison et statut d’import |
 | `POST` | `/api/seasons/:year/sync?force=true` | Met en file l’import d’une saison → `202` |
-| `GET` | `/api/races/:sessionKey` | Vue course : classement, rythme, faits marquants, positions |
-| `GET` | `/api/races/:sessionKey/drivers/:driverNumber` | Analyse d’un pilote |
-| `GET` | `/api/races/:sessionKey/compare?a=1&b=16` | Duel entre deux pilotes |
+| `GET` | `/api/races/:raceId` | Vue course : classement, rythme, faits marquants, positions |
+| `GET` | `/api/races/:raceId/drivers/:driverNumber` | Analyse d’un pilote |
+| `GET` | `/api/races/:raceId/compare?a=1&b=16` | Duel entre deux pilotes |
 
 ## Erreurs
 
